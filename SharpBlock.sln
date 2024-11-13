@@ -1,8 +1,18 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock", "SharpBlock\SharpBlock.csproj", "{B5CEB572-A778-4911-9153-0E35601058B7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.Server", "SharpBlock.Server\SharpBlock.Server.csproj", "{B5CEB572-A778-4911-9153-0E35601058B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpNBT", "SharpNBT\SharpNBT.csproj", "{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.NBT", "SharpBlock.NBT\SharpBlock.NBT.csproj", "{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.Core", "SharpBlock.Core\SharpBlock.Core.csproj", "{C47CFEAE-41D3-4FBE-B4D7-59F0FDC3AC4E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.Protocol", "SharpBlock.Protocol\SharpBlock.Protocol.csproj", "{C31C6F0F-CC1E-42EA-82CB-3375628C6A79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.Network", "SharpBlock.Network\SharpBlock.Network.csproj", "{E773C883-F03D-4946-9ED5-132FAA938501}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.API", "SharpBlock.API\SharpBlock.API.csproj", "{B72712CE-E654-483E-BBA4-AAA102CEF41E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.PluginLoader", "SharpBlock.PluginLoader\SharpBlock.PluginLoader.csproj", "{6E718AA3-6595-496D-B862-87AA246D536E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +28,25 @@ Global
 		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C47CFEAE-41D3-4FBE-B4D7-59F0FDC3AC4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C47CFEAE-41D3-4FBE-B4D7-59F0FDC3AC4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C47CFEAE-41D3-4FBE-B4D7-59F0FDC3AC4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C47CFEAE-41D3-4FBE-B4D7-59F0FDC3AC4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C31C6F0F-CC1E-42EA-82CB-3375628C6A79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C31C6F0F-CC1E-42EA-82CB-3375628C6A79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C31C6F0F-CC1E-42EA-82CB-3375628C6A79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C31C6F0F-CC1E-42EA-82CB-3375628C6A79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E773C883-F03D-4946-9ED5-132FAA938501}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E773C883-F03D-4946-9ED5-132FAA938501}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E773C883-F03D-4946-9ED5-132FAA938501}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E773C883-F03D-4946-9ED5-132FAA938501}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B72712CE-E654-483E-BBA4-AAA102CEF41E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B72712CE-E654-483E-BBA4-AAA102CEF41E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B72712CE-E654-483E-BBA4-AAA102CEF41E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B72712CE-E654-483E-BBA4-AAA102CEF41E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E718AA3-6595-496D-B862-87AA246D536E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E718AA3-6595-496D-B862-87AA246D536E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E718AA3-6595-496D-B862-87AA246D536E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E718AA3-6595-496D-B862-87AA246D536E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

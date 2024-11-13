@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>PluginLoader</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\SharpBlock.API\SharpBlock.API.csproj" />
+      <ProjectReference Include="..\SharpBlock.Core\SharpBlock.Core.csproj" />
+    </ItemGroup>
+
+</Project>
