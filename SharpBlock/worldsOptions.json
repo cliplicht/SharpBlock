@@ -1,0 +1,31 @@
+{
+  "Worlds": {
+    "Name": "world",
+    "IsHardcore": false,
+    "GameMode": 0,
+    "ViewDistance": 10,
+    "SimulationDistance": 10,
+    "ReduceDebugInfo": false,
+    "EnableRespawnScreen": true,
+    "IsDebug": false,
+    "isFlat": false,
+    "Dimensions": [
+      {
+        "Name": "minecraft:overworld",
+        "Id": 0,
+        "PiglinSafe": true,
+        "Natural": true,
+        "AmbientLight": 1.0,
+        "Infiniburn": "minecraft:infiniburn_overworld",
+        "RespawnAnchorWorks": false,
+        "HasSkylight": true,
+        "BedWorks": true,
+        "Effects": "minecraft:overworld",
+        "LogicalHeight": 256,
+        "CoordinateScale": 1.0,
+        "Ultrawarm": false,
+        "HasCeiling": false
+      }
+    ]
+  }
+}

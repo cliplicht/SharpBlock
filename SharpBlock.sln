@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock", "SharpBlock\SharpBlock.csproj", "{B5CEB572-A778-4911-9153-0E35601058B7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpNBT", "SharpNBT\SharpNBT.csproj", "{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B5CEB572-A778-4911-9153-0E35601058B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5CEB572-A778-4911-9153-0E35601058B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5CEB572-A778-4911-9153-0E35601058B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5CEB572-A778-4911-9153-0E35601058B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D60370C3-EF63-48F9-8F5B-6DB8B5E634AF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
