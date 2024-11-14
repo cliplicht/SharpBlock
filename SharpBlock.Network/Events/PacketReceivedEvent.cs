@@ -3,13 +3,8 @@ using SharpBlock.Core.Protocol;
 
 namespace SharpBlock.Network.Events;
 
-public class PacketReceivedEvent : NetworkEvent
+public class PacketReceivedEvent(IClientConnection client, IPacket packet, TaskCompletionSource processingCompletion)
+    : NetworkEvent(client, processingCompletion)
 {
-    public IPacket Packet { get; }
-
-    public PacketReceivedEvent(IClientConnection client, IPacket packet)
-        : base(client)
-    {
-        Packet = packet;
-    }
+    public IPacket Packet { get; } = packet;
 }

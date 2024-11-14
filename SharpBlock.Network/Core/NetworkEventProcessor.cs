@@ -11,6 +11,7 @@ public class NetworkEventProcessor
     private readonly NetworkEventQueue _eventQueue;
     private readonly ILogger<NetworkEventProcessor> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly SemaphoreSlim _eventProcessingLock = new(1, 1);
 
     public NetworkEventProcessor(
         NetworkEventQueue eventQueue,
@@ -31,7 +32,6 @@ public class NetworkEventProcessor
             try
             {
                 NetworkEvent networkEvent = await _eventQueue.DequeueAsync(cancellationToken);
-
                 await HandleEventAsync(networkEvent, cancellationToken);
             }
             catch (OperationCanceledException)
@@ -51,61 +51,44 @@ public class NetworkEventProcessor
 
     private async Task HandleEventAsync(NetworkEvent networkEvent, CancellationToken cancellationToken)
     {
-        switch (networkEvent)
+        if (networkEvent.Client is ClientConnection clientConnection && !clientConnection.TcpClient.Connected)
         {
-            case DataReceivedEvent dataEvent:
-                await HandleDataReceivedAsync(dataEvent, cancellationToken);
-                break;
+            _logger.LogWarning("Skipping event processing for a disconnected client.");
+            return;
+        }
+        
+        await _eventProcessingLock.WaitAsync(cancellationToken);
+        try
+        {
+            switch (networkEvent)
+            {
+                case PacketReceivedEvent packetEvent:
+                    await HandlePacketReceivedAsync(packetEvent, cancellationToken);
+                    break;
 
-            case PacketReceivedEvent packetEvent:
-                await HandlePacketReceivedAsync(packetEvent, cancellationToken);
-                break;
+                case ClientDisconnectedEvent disconnectedEvent:
+                    await HandleClientDisconnected(disconnectedEvent);
+                    break;
 
-            case ClientDisconnectedEvent disconnectedEvent:
-                await HandleClientDisconnected(disconnectedEvent);
-                break;
-
-            default:
-                _logger.LogWarning($"Unhandled network event type: {networkEvent.GetType().Name}");
-                break;
+                default:
+                    _logger.LogWarning($"Unhandled network event type: {networkEvent.GetType().Name}");
+                    break;
+            }
+        }
+        finally
+        {
+            _eventProcessingLock.Release();
         }
     }
-
-    private async Task HandleDataReceivedAsync(DataReceivedEvent dataEvent, CancellationToken cancellationToken)
-    {
-        var client = dataEvent.Client;
-        var packetParser = _serviceProvider.GetRequiredService<PacketParser>();
-
-        // Combine leftover data with new data
-        byte[] bufferedData = client.GetBufferedData();
-        byte[] combinedData = CombineBuffers(bufferedData, dataEvent.Data);
-
-        int leftoverBytes = 0;
-        var packets = packetParser.Parse(combinedData, combinedData.Length, client.ConnectionState, ref leftoverBytes);
-
-        foreach (var packet in packets)
-        {
-            // Enqueue PacketReceivedEvent for each parsed packet
-            _eventQueue.Enqueue(new PacketReceivedEvent(client, packet));
-        }
-
-        // Store leftover bytes in client for next read
-        if (leftoverBytes > 0)
-        {
-            // Correctly call SetBufferedData with required parameters
-            client.SetBufferedData(combinedData, combinedData.Length - leftoverBytes, leftoverBytes);
-        }
-        else
-        {
-            client.ClearBufferedData();
-        }
-    }
+    
 
     private async Task HandlePacketReceivedAsync(PacketReceivedEvent packetEvent, CancellationToken cancellationToken)
     {
         var packetHandler = ActivatorUtilities.CreateInstance<PacketHandler>(_serviceProvider);
         await packetHandler.SetClientConnectionAsync(packetEvent.Client);
         await packetHandler.HandlePacketAsync(packetEvent.Packet);
+        
+        packetEvent.ProcessingCompletion.SetResult();
     }
 
     private async Task HandleClientDisconnected(ClientDisconnectedEvent disconnectedEvent)
@@ -114,13 +97,6 @@ public class NetworkEventProcessor
         var packetHandler = ActivatorUtilities.CreateInstance<PacketHandler>(_serviceProvider);
         await packetHandler.SetClientConnectionAsync(disconnectedEvent.Client);
         await packetHandler.HandleDisconnectAsync();
-    }
-
-    private byte[] CombineBuffers(byte[] buffer1, byte[] buffer2)
-    {
-        byte[] combined = new byte[buffer1.Length + buffer2.Length];
-        Buffer.BlockCopy(buffer1, 0, combined, 0, buffer1.Length);
-        Buffer.BlockCopy(buffer2, 0, combined, buffer1.Length, buffer2.Length);
-        return combined;
+        disconnectedEvent.ProcessingCompletion.SetResult();
     }
 }

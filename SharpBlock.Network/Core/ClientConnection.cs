@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpBlock.Core;
@@ -8,20 +9,20 @@ using SharpBlock.Core.Options;
 using SharpBlock.Core.Protocol;
 using SharpBlock.Core.Utils;
 using SharpBlock.Network.Events;
+using SharpBlock.Protocol;
 
 namespace SharpBlock.Network.Core;
 
 public class ClientConnection : IDisposable, IClientConnection
 {
-    private readonly TcpClient _tcpClient;
+    public readonly TcpClient TcpClient;
     private readonly NetworkStream _networkStream;
     private readonly ILogger<ClientConnection> _logger;
     private readonly ServerOptions _serverOptions;
     private readonly NetworkEventQueue _eventQueue;
     private readonly IServiceProvider _serviceProvider;
-
-    // Buffer for incomplete data
-    private byte[] _leftoverBuffer = Array.Empty<byte>();
+    private readonly PacketFactory _packetFactory;
+    private readonly SemaphoreSlim _packetProcessingLock = new(1, 1);
 
     // Connection state
     public ConnectionState ConnectionState { get; set; } = ConnectionState.Handshaking;
@@ -33,19 +34,20 @@ public class ClientConnection : IDisposable, IClientConnection
         NetworkEventQueue eventQueue,
         IServiceProvider serviceProvider)
     {
-        _tcpClient = tcpClient;
+        TcpClient = tcpClient;
         _networkStream = tcpClient.GetStream();
         _logger = logger;
         _serverOptions = serverOptions.Value;
         _eventQueue = eventQueue;
         _serviceProvider = serviceProvider;
+        _packetFactory = _serviceProvider.GetRequiredService<PacketFactory>();
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await ReadLoopAsync(cancellationToken);
+            await ReceivePacketsAsync(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -57,31 +59,79 @@ public class ClientConnection : IDisposable, IClientConnection
         }
     }
 
-    private async Task ReadLoopAsync(CancellationToken cancellationToken)
+    private async Task ReceivePacketsAsync(CancellationToken cancellationToken)
     {
-        byte[] buffer = new byte[8192];
-        byte[] leftoverBuffer = GetBufferedData();
-        int leftoverBytes = leftoverBuffer.Length;
-
         while (!cancellationToken.IsCancellationRequested)
         {
-            int bytesRead = await _networkStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-
-            if (bytesRead == 0)
+            await _packetProcessingLock.WaitAsync(cancellationToken);
+            var processingCompletion = new TaskCompletionSource();
+            try
+            {
+                
+                IPacket packet = await ReadPacketAsync(cancellationToken);
+                if (packet != null)
+                {
+                    _eventQueue.Enqueue(new PacketReceivedEvent(this, packet, processingCompletion));
+                }
+            }
+            catch (IOException)
             {
                 _logger.LogInformation("Client disconnected");
-                _eventQueue.Enqueue(new ClientDisconnectedEvent(this));
+                _eventQueue.Enqueue(new ClientDisconnectedEvent(this, processingCompletion));
                 break;
             }
-            _logger.LogInformation($"Received {bytesRead} bytes from client after handshake.");
-            
-            // Copy the data to a new array of the appropriate size
-            byte[] data = new byte[bytesRead];
-            Array.Copy(buffer, data, bytesRead);
-
-            // Enqueue the DataReceivedEvent with the raw data
-            _eventQueue.Enqueue(new DataReceivedEvent(this, data));
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error receiving data");
+                _eventQueue.Enqueue(new ClientDisconnectedEvent(this,processingCompletion));
+                break;
+            }
+            finally
+            {
+                await processingCompletion.Task;
+                _packetProcessingLock.Release();
+            }
         }
+    }
+
+    public async Task<IPacket> ReadPacketAsync(CancellationToken cancellationToken)
+    {
+        // Read the VarInt packet length
+        int packetLength = await _networkStream.ReadVarIntAsync(cancellationToken);
+
+        if (packetLength <= 0)
+        {
+            _logger.LogWarning($"Invalid packet length: {packetLength}");
+            throw new IOException("Invalid packet length.");
+        }
+
+        // Read the packet data based on the packet length
+        byte[] packetData = new byte[packetLength];
+        int totalBytesRead = 0;
+        while (totalBytesRead < packetLength)
+        {
+            int bytesRead = await _networkStream.ReadAsync(packetData, totalBytesRead, packetLength - totalBytesRead, cancellationToken);
+            if (bytesRead == 0)
+            {
+                // The client has disconnected
+                throw new IOException("Client disconnected");
+            }
+            totalBytesRead += bytesRead;
+        }
+
+        using var ms = new MemoryStream(packetData);
+        int packetId = await ms.ReadVarIntAsync(cancellationToken);
+
+        // Create packet based on the current connection state
+        IPacket packet = _packetFactory.CreatePacket(packetId, ConnectionState);
+        if (packet == null)
+        {
+            _logger.LogWarning($"Unknown packet ID {packetId} in state {ConnectionState}");
+            return null;
+        }
+
+        packet.Read(ms);
+        return packet;
     }
 
     public async Task SendPacketAsync(IPacket packet)
@@ -103,37 +153,31 @@ public class ClientConnection : IDisposable, IClientConnection
     public void Dispose()
     {
         _networkStream.Dispose();
-        _tcpClient.Dispose();
+        TcpClient.Dispose();
     }
 
-    // Methods to handle leftover data
-    public byte[] GetBufferedData()
+    // Implement the RemoteEndPoint property
+    public EndPoint? RemoteEndPoint
     {
-        return _leftoverBuffer;
+        get
+        {
+            try
+            {
+                if (TcpClient?.Client != null && TcpClient.Client.Connected)
+                {
+                    return TcpClient.Client.RemoteEndPoint;
+                }
+                else
+                {
+                    _logger.LogWarning("Attempted to access RemoteEndPoint on a disconnected or disposed client.");
+                    return null;
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                _logger.LogWarning("Attempted to access RemoteEndPoint on a disposed client.");
+                return null;
+            }
+        }
     }
-
-    public void SetBufferedData(byte[] buffer, int offset, int count)
-    {
-        if (buffer == null)
-            throw new ArgumentNullException(nameof(buffer));
-        if (offset < 0 || count < 0 || offset + count > buffer.Length)
-            throw new ArgumentOutOfRangeException("Invalid offset and count relative to buffer length.");
-
-        _leftoverBuffer = new byte[count];
-        Buffer.BlockCopy(buffer, offset, _leftoverBuffer, 0, count);
-    }
-    
-    public void SetBufferedData(byte[] buffer)
-    {
-        _leftoverBuffer = buffer;
-    }
-
-    // Implement the missing ClearBufferedData method
-    public void ClearBufferedData()
-    {
-        _leftoverBuffer = [];
-    }
-
-    // Implement the missing RemoteEndPoint property
-    public EndPoint? RemoteEndPoint => _tcpClient.Client.RemoteEndPoint;
 }

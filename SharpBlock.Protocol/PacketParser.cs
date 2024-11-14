@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using SharpBlock.Core;
-using SharpBlock.Core.Extensions;
 using SharpBlock.Core.Protocol;
 using SharpBlock.Core.Utils;
 
@@ -17,14 +16,17 @@ public class PacketParser
         _packetFactory = packetFactory;
     }
 
-    public List<IPacket> Parse(byte[] buffer, int bytesRead, ConnectionState connectionState, ref int leftoverBytes)
+    public List<IPacket> Parse(byte[] buffer, int offset, int length, ConnectionState connectionState,
+        out int bytesConsumed)
     {
         List<IPacket> packets = new();
-        int offset = 0;
+        int initialOffset = offset;
+        int bytesRead = 0;
 
-        _logger.LogInformation($"Starting packet parsing with {bytesRead} bytes, connection state: {connectionState}");
+        _logger.LogInformation(
+            $"Starting packet parsing with {length} bytes at offset {offset}, connection state: {connectionState}");
 
-        while (offset < bytesRead)
+        while (bytesRead < length)
         {
             int packetStartOffset = offset;
 
@@ -38,13 +40,15 @@ public class PacketParser
 
             int packetLength = packetLengthValue;
             offset += packetLengthVarIntLength;
+            bytesRead += packetLengthVarIntLength;
 
-            if (offset + packetLength > bytesRead)
+            if (bytesRead + packetLength > length)
             {
                 _logger.LogWarning(
-                    $"Incomplete packet detected. Packet length: {packetLength}, bytes available: {bytesRead - offset}");
+                    $"Incomplete packet detected. Packet length: {packetLength}, bytes available: {length - bytesRead}");
                 // Reset offset to start of incomplete packet
                 offset = packetStartOffset;
+                bytesRead -= packetLengthVarIntLength;
                 break;
             }
 
@@ -57,11 +61,13 @@ public class PacketParser
                 _logger.LogWarning("Incomplete VarInt for packet ID detected.");
                 // Reset offset to start of incomplete packet
                 offset = packetStartOffset;
+                bytesRead -= packetLengthVarIntLength;
                 break; // Wait for more data
             }
 
             int packetId = packetIdValue;
             offset += packetIdVarIntLength;
+            bytesRead += packetIdVarIntLength;
 
             // Calculate bytes read from packet data so far
             int bytesReadFromPacketData = offset - packetDataStartOffset;
@@ -74,14 +80,16 @@ public class PacketParser
                 _logger.LogWarning("Packet data length is negative.");
                 // Reset offset to start of incomplete packet
                 offset = packetStartOffset;
+                bytesRead -= (packetLengthVarIntLength + packetIdVarIntLength);
                 break;
             }
 
-            if (offset + packetDataLength > bytesRead)
+            if (bytesRead + packetDataLength > length)
             {
                 _logger.LogWarning("Incomplete packet data detected.");
                 // Reset offset to start of incomplete packet
                 offset = packetStartOffset;
+                bytesRead -= (packetLengthVarIntLength + packetIdVarIntLength);
                 break; // Wait for more data
             }
 
@@ -91,6 +99,7 @@ public class PacketParser
                 _logger.LogWarning($"Unknown packet ID {packetId} in state {connectionState}");
                 // Skip unknown packet
                 offset += packetDataLength;
+                bytesRead += packetDataLength;
                 continue;
             }
 
@@ -101,12 +110,13 @@ public class PacketParser
 
             _logger.LogInformation($"Successfully parsed packet ID {packetId} in state {connectionState}");
 
-            // Advance the offset by the packet data length
+            // Advance the offset and bytesRead by the packet data length
             offset += packetDataLength;
+            bytesRead += packetDataLength;
         }
 
-        // Calculate leftover bytes
-        leftoverBytes = bytesRead - offset;
+        // Set the number of bytes consumed
+        bytesConsumed = offset - initialOffset;
 
         return packets;
     }

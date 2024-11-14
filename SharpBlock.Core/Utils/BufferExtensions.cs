@@ -4,14 +4,17 @@ public static class BufferExtensions
 {
     public static int ReadVarInt(this byte[] buffer, int offset, out int bytesRead)
     {
+        bytesRead = 0;
         int numRead = 0;
         int result = 0;
         byte read;
-        do
+
+        while (true)
         {
             if (offset + numRead >= buffer.Length)
             {
-                throw new IndexOutOfRangeException("Not enough bytes to read VarInt");
+                // Not enough data to read a complete VarInt
+                throw new Exception("ReadVarInt not enough data to read complete VarInt");
             }
 
             read = buffer[offset + numRead];
@@ -23,7 +26,12 @@ public static class BufferExtensions
             {
                 throw new FormatException("VarInt is too big");
             }
-        } while ((read & 0b10000000) != 0);
+
+            if ((read & 0b10000000) == 0)
+            {
+                break;
+            }
+        }
 
         bytesRead = numRead;
         return result;

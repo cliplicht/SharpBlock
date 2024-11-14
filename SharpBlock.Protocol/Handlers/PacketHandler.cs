@@ -16,6 +16,7 @@ public class PacketHandler : IPacketHandler
 {
     private readonly ILogger<PacketHandler> _logger;
     private IClientConnection? _clientConnection;
+    private JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.KebabCaseLower };
 
     public PacketHandler(ILogger<PacketHandler> logger)
     {
@@ -74,7 +75,7 @@ public class PacketHandler : IPacketHandler
         
         var statusResponse = new StatusResponsePacket()
         {
-            JsonResponse = JsonSerializer.Serialize(serverStatus)
+            JsonResponse = JsonSerializer.Serialize(serverStatus, _jsonSerializerOptions)
         };
 
         if (_clientConnection != null)

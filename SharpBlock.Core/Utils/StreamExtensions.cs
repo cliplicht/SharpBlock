@@ -41,6 +41,50 @@ public static class StreamExtensions
 
         return (int)result;
     }
+    
+    public static async Task<int> ReadVarIntAsync(this Stream stream, CancellationToken cancellationToken)
+    {
+        int numRead = 0;
+        int result = 0;
+        byte read;
+
+        while (true)
+        {
+            int current = await stream.ReadByteAsync(cancellationToken);
+            if (current == -1)
+            {
+                throw new EndOfStreamException();
+            }
+
+            read = (byte)current;
+            int value = (read & 0b01111111);
+            result |= (value << (7 * numRead));
+
+            numRead++;
+            if (numRead > 5)
+            {
+                throw new FormatException("VarInt is too big");
+            }
+
+            if ((read & 0b10000000) == 0)
+            {
+                break;
+            }
+        }
+
+        return result;
+    }
+    
+    public static async Task<int> ReadByteAsync(this Stream stream, CancellationToken cancellationToken)
+    {
+        byte[] buffer = new byte[1];
+        int bytesRead = await stream.ReadAsync(buffer, 0, 1, cancellationToken);
+        if (bytesRead == 0)
+        {
+            return -1;
+        }
+        return buffer[0];
+    }
 
     public static void WriteVarInt(this Stream stream, int value)
     {
