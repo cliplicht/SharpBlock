@@ -37,7 +37,7 @@ public class SharpBlockHostedService : IHostedService
         _tcpListener = new TcpListener(IPAddress.Any, port);
         _tcpListener.Start();
 
-        _logger.LogInformation($"Server started on port {port}");
+        _logger.LogInformation("Server started {EndPointAddress}", _tcpListener.LocalEndpoint.ToString());
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -67,9 +67,10 @@ public class SharpBlockHostedService : IHostedService
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                TcpClient tcpClient = await _tcpListener!.AcceptTcpClientAsync();
+                TcpClient tcpClient = await _tcpListener!.AcceptTcpClientAsync(cancellationToken);
 
-                _logger.LogInformation($"New connection from {tcpClient.Client.RemoteEndPoint}");
+                _logger.LogDebug("New connection from {RemoteEndPoint}",
+                    tcpClient.Client.RemoteEndPoint?.ToString());
 
                 // Handle client connection
                 _ = Task.Run(() => HandleClientAsync(tcpClient, cancellationToken), cancellationToken);
@@ -77,7 +78,7 @@ public class SharpBlockHostedService : IHostedService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError($"Exception in AcceptClientsAsync: {ex.Message}");
+            _logger.LogError("Exception in AcceptClientsAsync: {ExceptionMessage}", ex.Message);
         }
     }
 
@@ -93,7 +94,8 @@ public class SharpBlockHostedService : IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Exception handling client {tcpClient.Client.RemoteEndPoint}: {ex.Message}");
+            _logger.LogError("Exception handling client {RemoteEndPoint}: {ExceptionMessage}",
+                tcpClient.Client.RemoteEndPoint?.ToString(), ex.Message);
         }
     }
 }

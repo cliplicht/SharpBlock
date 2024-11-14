@@ -51,7 +51,7 @@ public class ClientConnection : IDisposable, IClientConnection
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in client connection: {ex.Message}");
+            _logger.LogError("Error in client connection: {ExceptionMessage}", ex.Message);
         }
         finally
         {
@@ -67,23 +67,20 @@ public class ClientConnection : IDisposable, IClientConnection
             var processingCompletion = new TaskCompletionSource();
             try
             {
-                
                 IPacket packet = await ReadPacketAsync(cancellationToken);
-                if (packet != null)
-                {
-                    _eventQueue.Enqueue(new PacketReceivedEvent(this, packet, processingCompletion));
-                }
+                _eventQueue.Enqueue(new PacketReceivedEvent(this, packet, processingCompletion));
             }
             catch (IOException)
             {
-                _logger.LogInformation("Client disconnected");
-                _eventQueue.Enqueue(new ClientDisconnectedEvent(this, processingCompletion));
+                IPacket packet = await ReadPacketAsync(cancellationToken);
+                _eventQueue.Enqueue(new ClientDisconnectedEvent(this, packet ,processingCompletion));
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error receiving data");
-                _eventQueue.Enqueue(new ClientDisconnectedEvent(this,processingCompletion));
+                IPacket packet = await ReadPacketAsync(cancellationToken);
+                _eventQueue.Enqueue(new ClientDisconnectedEvent(this, packet,processingCompletion));
                 break;
             }
             finally
@@ -101,7 +98,7 @@ public class ClientConnection : IDisposable, IClientConnection
 
         if (packetLength <= 0)
         {
-            _logger.LogWarning($"Invalid packet length: {packetLength}");
+            _logger.LogWarning("Invalid packet length: {PacketLength}",packetLength);
             throw new IOException("Invalid packet length.");
         }
 
@@ -124,13 +121,16 @@ public class ClientConnection : IDisposable, IClientConnection
 
         // Create packet based on the current connection state
         IPacket packet = _packetFactory.CreatePacket(packetId, ConnectionState);
+
         if (packet == null)
         {
-            _logger.LogWarning($"Unknown packet ID {packetId} in state {ConnectionState}");
+            _logger.LogDebug("Unknown packetID [{PacketId}] | State: [{State}]", packetId, ConnectionState);
             return null;
         }
-
-        packet.Read(ms);
+        else
+        {
+            packet.Read(ms);
+        }
         return packet;
     }
 
@@ -163,19 +163,19 @@ public class ClientConnection : IDisposable, IClientConnection
         {
             try
             {
-                if (TcpClient?.Client != null && TcpClient.Client.Connected)
+                if (TcpClient?.Client is { Connected: true })
                 {
                     return TcpClient.Client.RemoteEndPoint;
                 }
                 else
                 {
-                    _logger.LogWarning("Attempted to access RemoteEndPoint on a disconnected or disposed client.");
+                    _logger.LogDebug("Attempted to access RemoteEndPoint on a disconnected or disposed client");
                     return null;
                 }
             }
             catch (ObjectDisposedException)
             {
-                _logger.LogWarning("Attempted to access RemoteEndPoint on a disposed client.");
+                _logger.LogDebug("Attempted to access RemoteEndPoint on a disposed client");
                 return null;
             }
         }

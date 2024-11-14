@@ -1,71 +1,86 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Xml;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SharpBlock.Core.Options;
+using SharpBlock.Core.Services;
+using SharpBlock.Core.Utils;
 using SharpBlock.Network.Core;
 using SharpBlock.Network.Events;
 using SharpBlock.Protocol;
 using SharpBlock.Protocol.Handlers;
 using SharpBlock.Server.Core;
 
-namespace SharpBlock.Server;
 
-static class Program
+await EnsureServerJsonExists();
+var builder = Host.CreateDefaultBuilder(args);
+
+
+builder.UseEnvironment(CustomEnvironments.Java);
+
+builder.ConfigureAppConfiguration((hostingContext, config) =>
 {
-    public static async Task Main(string[] args)
-    {
-        await EnsureServerJsonExists();
-        using IHost host = CreateHostBuilder(args).Build();
-        await host.RunAsync();
-    }
+    config.SetBasePath(AppDomain.CurrentDomain.BaseDirectory);
+    config.AddJsonFile("server.json", optional: false, reloadOnChange: true);
+    config.AddEnvironmentVariables();
+    config.AddEnvironmentVariables(prefix: "SHARPBLOCK_");
+});
 
 
-    private static async Task EnsureServerJsonExists()
+builder.ConfigureLogging((context,logging) =>
+{
+    logging.ClearProviders();
+                
+    logging.AddConsole(options =>
     {
-        string configFileName = "server.json";
-        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configFileName);
+        options.FormatterName = "fancy";
+    });
+    logging.AddConsoleFormatter<FancyLogFormatter, FancyLogFormatterOptions>();
+    logging.SetMinimumLevel(context.Configuration.GetRequiredSection(ServerOptions.Server)
+        .GetValue<LogLevel>("Instance:LogLevel"));
+});
+
+builder.ConfigureServices((context, services) =>
+{
+    services.Configure<ServerOptions>(context.Configuration.GetSection(ServerOptions.Server));
+    services.Configure<InstanceOptions>(context.Configuration.GetSection(InstanceOptions.Instance));
+    services.AddSingleton<NetworkEventQueue>();
+    services.AddSingleton<PacketFactory>();
+    services.AddSingleton<NetworkEventProcessor>();
+    services.AddHttpClient();
+    services.AddSingleton<EncryptionService>();
+    services.AddTransient<PacketHandler>();
+
+    services.AddHostedService<SharpBlockHostedService>();
+    services.AddHostedService<ConsoleCommandListener>();
+});
+
+
+var app = builder.Build();
+
+
+await app.RunAsync();
+
+async Task EnsureServerJsonExists()
+{
+    string configFileName = "server.json";
+    string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configFileName);
         
-        if (!File.Exists(path))
+    if (!File.Exists(path))
+    {
+        var jsonOptions = new JsonSerializerOptions
         {
-            var config = new ServerOptions()
+            WriteIndented = true,
+            Converters =
             {
-                Instance = new Instance()
-            };
-            string json = JsonSerializer.Serialize(config);
-            await File.WriteAllTextAsync(path,json);
-        }
+                new JsonStringEnumConverter()
+            }
+        };
+            
+        string json = JsonSerializer.Serialize(new ServerOptions(), jsonOptions);
+        await File.WriteAllTextAsync(path,json);
     }
-    
-
-    static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureLogging(logging =>
-            {
-                logging.ClearProviders();
-                logging.AddConsole();
-            })
-            .ConfigureAppConfiguration((hostingContext, config) =>
-            {
-                config.SetBasePath(AppDomain.CurrentDomain.BaseDirectory);
-                config.AddJsonFile("server.json", optional: true, reloadOnChange: true);
-                config.AddEnvironmentVariables();
-            })
-            .ConfigureServices((hostContext, services) =>
-            {
-                IConfiguration configuration = hostContext.Configuration;
-                services.Configure<ServerOptions>(configuration.GetSection("Server"));
-
-                services.AddSingleton<NetworkEventQueue>();
-                services.AddSingleton<PacketFactory>();
-                services.AddSingleton<NetworkEventProcessor>();
-
-                services.AddTransient<PacketParser>();
-                services.AddTransient<PacketHandler>();
-
-                services.AddHostedService<SharpBlockHostedService>();
-            });
 }

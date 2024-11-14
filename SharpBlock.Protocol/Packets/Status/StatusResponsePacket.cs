@@ -22,7 +22,7 @@ public class StatusResponsePacket : IStatusResponsePacket
         stream.Write(jsonBytes, 0, jsonBytes.Length);
     }
 
-    public Task HandleAsync(IPacketHandler handler)
+    public Task HandleAsync(IPacketHandler handler, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

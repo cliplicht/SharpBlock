@@ -8,5 +8,5 @@ public interface IPacket
 
     void Write(Stream stream);
 
-    Task HandleAsync(IPacketHandler handler);
+    Task HandleAsync(IPacketHandler handler, CancellationToken token);
 }

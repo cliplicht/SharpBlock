@@ -7,7 +7,7 @@ namespace SharpBlock.Protocol.Packets.Login
     public class LoginStartPacket : ILoginStartPacket
     {
         public int PacketId => 0x00;
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         public void Read(Stream stream)
         {
@@ -19,9 +19,9 @@ namespace SharpBlock.Protocol.Packets.Login
             // Not needed for client request
         }
 
-        public async Task HandleAsync(IPacketHandler handler)
+        public async Task HandleAsync(IPacketHandler handler, CancellationToken token)
         {
-            await handler.HandleLoginStartAsync(this);
+            await handler.HandleLoginStartAsync(this,token);
         }
     }
 }

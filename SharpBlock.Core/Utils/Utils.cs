@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SharpBlock.Core.Utils;
 
-public static class Utilities
+public static class Utils
 {
     public static string GenerateServerHash(byte[] sharedSecret, byte[] publicKey)
     {
@@ -18,5 +18,15 @@ public static class Utilities
             BigInteger num = new BigInteger(hash.Reverse().Concat(new byte[] { 0 }).ToArray());
             return num.ToString("x");
         }
+    }
+
+    public static string ConvertImageToBase64(string imagePath)
+    {
+        if (!File.Exists(imagePath)) return string.Empty;
+        
+        byte[] bytes = File.ReadAllBytes(imagePath);
+        string base64 = Convert.ToBase64String(bytes);
+        
+        return "data:image/png;base64," + base64;
     }
 }

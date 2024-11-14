@@ -10,4 +10,8 @@
       <ProjectReference Include="..\SharpBlock.Core\SharpBlock.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Packets\Cookie\" />
+    </ItemGroup>
+
 </Project>

@@ -19,9 +19,9 @@ namespace SharpBlock.Protocol.Packets.Ping
             // Not needed for client request
         }
 
-        public async Task HandleAsync(IPacketHandler handler)
+        public async Task HandleAsync(IPacketHandler handler, CancellationToken cancellationToken = default)
         {
-            await handler.HandlePingPacketAsync(this);
+            await handler.HandlePingPacketAsync(this, cancellationToken);
         }
     }
 }

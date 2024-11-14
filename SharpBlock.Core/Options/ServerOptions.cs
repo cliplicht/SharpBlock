@@ -3,10 +3,11 @@ namespace SharpBlock.Core.Options
     public class ServerOptions
     {
         public const string Server = "Server";
-        public Instance Instance { get; set; } = null!;
+        public InstanceOptions Instance { get; set; } = new();
         public bool OnlineMode { get; set; } = true;
-        public bool Encryption { get; set; } = true;
         public bool Compression { get; set; } = true;
+        public string FaviconPath { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"serverFaviconSmall.png");
+        public bool EnforcesSecureChat { get; set; } = false;
         public int CompressionThreshold { get; set; } = 256;
         public int Port { get; set; } = 25565;
         public int MaxPlayers { get; set; } = 20;

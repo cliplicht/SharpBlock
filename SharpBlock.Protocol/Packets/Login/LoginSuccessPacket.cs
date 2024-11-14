@@ -1,3 +1,4 @@
+using SharpBlock.Core.Models;
 using SharpBlock.Core.Protocol;
 using SharpBlock.Core.Utils;
 using SharpBlock.Protocol.Handlers;
@@ -7,8 +8,7 @@ namespace SharpBlock.Protocol.Packets.Login;
     {
         public int PacketId => 0x02;
 
-        public Guid UUID { get; set; }
-        public string Username { get; set; }
+        public MinecraftAccount MinecraftAccount { get; set; }
 
         public void Read(Stream stream)
         {
@@ -17,11 +17,24 @@ namespace SharpBlock.Protocol.Packets.Login;
 
         public void Write(Stream stream)
         {
-            stream.WriteUuid(UUID);
-            stream.WriteString(Username);
+            stream.WriteUuid(MinecraftAccount.Id);
+            stream.WriteString(MinecraftAccount.Name);
+            stream.WriteVarInt(MinecraftAccount.Properties.Count);
+
+            foreach (var property in MinecraftAccount.Properties)
+            {
+                stream.WriteString(property.Name);
+                stream.WriteString(property.Value);
+                stream.WriteByte(property.IsSigned ? (byte)1 : (byte)0);
+                if (property.IsSigned)
+                {
+                    stream.WriteString(property.Signature);
+                }
+                
+            }
         }
 
-        public  Task HandleAsync(IPacketHandler handler)
+        public  Task HandleAsync(IPacketHandler handler,CancellationToken token = default)
         {
             //Nothing to handle   
             return Task.CompletedTask;

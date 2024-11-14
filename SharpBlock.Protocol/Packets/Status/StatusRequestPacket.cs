@@ -15,8 +15,8 @@ public class StatusRequestPacket : IStatusRequestPacket
         
     }
 
-    public async Task HandleAsync(IPacketHandler handler)
+    public async Task HandleAsync(IPacketHandler handler, CancellationToken cancellationToken = default)
     {
-        await handler.HandleStatusRequestAsync(this);
+        await handler.HandleStatusRequestAsync(this, cancellationToken);
     }
 }

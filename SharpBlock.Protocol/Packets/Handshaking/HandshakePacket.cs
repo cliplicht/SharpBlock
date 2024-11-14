@@ -28,8 +28,8 @@ public class HandshakePacket : IHandshakePacket
         stream.WriteVarInt(NextState);
     }
 
-    public async Task HandleAsync(IPacketHandler handler)
+    public async Task HandleAsync(IPacketHandler handler, CancellationToken cancellationToken = default)
     {
-        await handler.HandleHandshakeAsync(this);
+        await handler.HandleHandshakeAsync(this, cancellationToken);
     }
 }

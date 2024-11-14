@@ -22,7 +22,7 @@ namespace SharpBlock.Protocol.Packets.Ping
             stream.Write(buffer, 0, 8);
         }
 
-        public Task HandleAsync(IPacketHandler handler)
+        public Task HandleAsync(IPacketHandler handler, CancellationToken cancellationToken = default)
         {
             // Server doesn't handle its own response
             return Task.CompletedTask;

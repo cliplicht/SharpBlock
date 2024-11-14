@@ -155,4 +155,50 @@ public static class StreamExtensions
 
         stream.Write(bigEndianUuidBytes, 0, 16);
     }
+    
+    public static void WriteInt(this Stream stream, int value)
+    {
+        byte[] data = BitConverter.GetBytes(value);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(data);
+        }
+        stream.Write(data, 0, data.Length);
+    }
+
+    public static void WriteLong(this Stream stream, long value)
+    {
+        byte[] data = BitConverter.GetBytes(value);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(data);
+        }
+        stream.Write(data, 0, data.Length);
+    }
+    
+    public static long ReadLong(this Stream stream)
+    {
+        byte[] buffer = new byte[8];
+        int bytesRead = stream.Read(buffer, 0, 8);
+
+        if (bytesRead < 8)
+        {
+            throw new EndOfStreamException("Failed to read 8 bytes for long integer.");
+        }
+
+        // Convert the big-endian bytes to a long
+        return ((long)buffer[0] << 56) |
+               ((long)buffer[1] << 48) |
+               ((long)buffer[2] << 40) |
+               ((long)buffer[3] << 32) |
+               ((long)buffer[4] << 24) |
+               ((long)buffer[5] << 16) |
+               ((long)buffer[6] << 8) |
+               (long)buffer[7];
+    }
+
+    public static void WriteBool(this Stream stream, bool value)
+    {
+        stream.WriteByte(value ? (byte)1 : (byte)0);
+    }
 }

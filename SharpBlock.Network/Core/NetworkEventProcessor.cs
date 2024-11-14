@@ -25,7 +25,7 @@ public class NetworkEventProcessor
 
     public async Task StartProcessingAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("NetworkEventProcessor started.");
+        _logger.LogDebug("NetworkEventProcessor started");
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -37,26 +37,26 @@ public class NetworkEventProcessor
             catch (OperationCanceledException)
             {
                 // The operation was canceled; exit the loop gracefully.
-                _logger.LogInformation("NetworkEventProcessor is stopping due to cancellation.");
+                _logger.LogDebug("NetworkEventProcessor is stopping due to cancellation");
                 break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing network event.");
+                _logger.LogError(ex, "Error processing network event");
             }
         }
 
-        _logger.LogInformation("NetworkEventProcessor has stopped.");
+        _logger.LogDebug("NetworkEventProcessor has stopped");
     }
 
     private async Task HandleEventAsync(NetworkEvent networkEvent, CancellationToken cancellationToken)
     {
         if (networkEvent.Client is ClientConnection clientConnection && !clientConnection.TcpClient.Connected)
         {
-            _logger.LogWarning("Skipping event processing for a disconnected client.");
+            _logger.LogDebug("Skipping event processing for a disconnected client");
             return;
         }
-        
+
         await _eventProcessingLock.WaitAsync(cancellationToken);
         try
         {
@@ -67,11 +67,11 @@ public class NetworkEventProcessor
                     break;
 
                 case ClientDisconnectedEvent disconnectedEvent:
-                    await HandleClientDisconnected(disconnectedEvent);
+                    await HandleClientDisconnected(disconnectedEvent, cancellationToken);
                     break;
 
                 default:
-                    _logger.LogWarning($"Unhandled network event type: {networkEvent.GetType().Name}");
+                    _logger.LogDebug("Unhandled network event type: {NetworkEventType}", networkEvent.GetType().Name);
                     break;
             }
         }
@@ -80,23 +80,24 @@ public class NetworkEventProcessor
             _eventProcessingLock.Release();
         }
     }
-    
+
 
     private async Task HandlePacketReceivedAsync(PacketReceivedEvent packetEvent, CancellationToken cancellationToken)
     {
         var packetHandler = ActivatorUtilities.CreateInstance<PacketHandler>(_serviceProvider);
-        await packetHandler.SetClientConnectionAsync(packetEvent.Client);
-        await packetHandler.HandlePacketAsync(packetEvent.Packet);
-        
+        await packetHandler.SetClientConnectionAsync(packetEvent.Client, cancellationToken);
+        await packetHandler.HandlePacketAsync(packetEvent.Packet, cancellationToken);
+
         packetEvent.ProcessingCompletion.SetResult();
     }
 
-    private async Task HandleClientDisconnected(ClientDisconnectedEvent disconnectedEvent)
+    private async Task HandleClientDisconnected(ClientDisconnectedEvent disconnectedEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Client disconnected: {RemoteEndPoint}", disconnectedEvent.Client.RemoteEndPoint?.ToString());
+        _logger.LogDebug("Client disconnected: {RemoteEndPoint}",
+            disconnectedEvent.Client.RemoteEndPoint?.ToString());
         var packetHandler = ActivatorUtilities.CreateInstance<PacketHandler>(_serviceProvider);
-        await packetHandler.SetClientConnectionAsync(disconnectedEvent.Client);
-        await packetHandler.HandleDisconnectAsync();
+        await packetHandler.SetClientConnectionAsync(disconnectedEvent.Client, cancellationToken);
+        await packetHandler.HandleDisconnectAsync(disconnectedEvent.Packet, cancellationToken);
         disconnectedEvent.ProcessingCompletion.SetResult();
     }
 }
