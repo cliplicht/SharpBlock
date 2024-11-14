@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.API", "SharpBloc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.PluginLoader", "SharpBlock.PluginLoader\SharpBlock.PluginLoader.csproj", "{6E718AA3-6595-496D-B862-87AA246D536E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpBlock.Tests", "SharpBlock.Tests\SharpBlock.Tests.csproj", "{FB25A623-6D14-4C3C-A693-645141E67555}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{6E718AA3-6595-496D-B862-87AA246D536E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6E718AA3-6595-496D-B862-87AA246D536E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6E718AA3-6595-496D-B862-87AA246D536E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB25A623-6D14-4C3C-A693-645141E67555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB25A623-6D14-4C3C-A693-645141E67555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB25A623-6D14-4C3C-A693-645141E67555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB25A623-6D14-4C3C-A693-645141E67555}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

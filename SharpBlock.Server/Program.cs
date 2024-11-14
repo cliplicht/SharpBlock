@@ -31,7 +31,10 @@ static class Program
         
         if (!File.Exists(path))
         {
-            var config = new ServerOptions();
+            var config = new ServerOptions()
+            {
+                Instance = new Instance()
+            };
             string json = JsonSerializer.Serialize(config);
             await File.WriteAllTextAsync(path,json);
         }

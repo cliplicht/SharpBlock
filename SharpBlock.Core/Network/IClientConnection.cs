@@ -6,8 +6,7 @@ namespace SharpBlock.Core.Network;
 public interface IClientConnection
 {
     // Existing members
-    ConnectionState ConnectionState { get; }
-    Task SetConnectionStateAsync(ConnectionState newState);
+    ConnectionState ConnectionState { get; set; }
     Task SendPacketAsync(IPacket packet);
 
     // Add the missing methods
@@ -16,5 +15,5 @@ public interface IClientConnection
     void ClearBufferedData();
 
     // Add the missing property
-    EndPoint RemoteEndPoint { get; }
+    EndPoint? RemoteEndPoint { get; }
 }

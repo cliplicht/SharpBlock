@@ -24,7 +24,7 @@ public class ClientConnection : IDisposable, IClientConnection
     private byte[] _leftoverBuffer = Array.Empty<byte>();
 
     // Connection state
-    public ConnectionState ConnectionState { get; private set; } = ConnectionState.Handshaking;
+    public ConnectionState ConnectionState { get; set; } = ConnectionState.Handshaking;
 
     public ClientConnection(
         TcpClient tcpClient,
@@ -84,13 +84,6 @@ public class ClientConnection : IDisposable, IClientConnection
         }
     }
 
-    public Task SetConnectionStateAsync(ConnectionState newState)
-    {
-        ConnectionState = newState;
-        _logger.LogInformation($"Connection state changed to {ConnectionState}");
-        return Task.CompletedTask;
-    }
-
     public async Task SendPacketAsync(IPacket packet)
     {
         using var ms = new MemoryStream();
@@ -121,16 +114,26 @@ public class ClientConnection : IDisposable, IClientConnection
 
     public void SetBufferedData(byte[] buffer, int offset, int count)
     {
+        if (buffer == null)
+            throw new ArgumentNullException(nameof(buffer));
+        if (offset < 0 || count < 0 || offset + count > buffer.Length)
+            throw new ArgumentOutOfRangeException("Invalid offset and count relative to buffer length.");
+
         _leftoverBuffer = new byte[count];
         Buffer.BlockCopy(buffer, offset, _leftoverBuffer, 0, count);
+    }
+    
+    public void SetBufferedData(byte[] buffer)
+    {
+        _leftoverBuffer = buffer;
     }
 
     // Implement the missing ClearBufferedData method
     public void ClearBufferedData()
     {
-        _leftoverBuffer = Array.Empty<byte>();
+        _leftoverBuffer = [];
     }
 
     // Implement the missing RemoteEndPoint property
-    public EndPoint RemoteEndPoint => _tcpClient.Client.RemoteEndPoint!;
+    public EndPoint? RemoteEndPoint => _tcpClient.Client.RemoteEndPoint;
 }

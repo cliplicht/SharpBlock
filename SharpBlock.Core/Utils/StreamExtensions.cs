@@ -7,7 +7,7 @@ public static class StreamExtensions
     public static int ReadVarInt(this Stream stream)
     {
         int numRead = 0;
-        int result = 0;
+        long result = 0;
         byte read;
 
         while (true)
@@ -15,12 +15,11 @@ public static class StreamExtensions
             int current = stream.ReadByte();
             if (current == -1)
             {
-                // Not enough data to read a complete VarInt
-                return -1;
+                throw new EndOfStreamException();
             }
 
             read = (byte)current;
-            int value = (read & 0b01111111);
+            long value = (read & 0b01111111);
             result |= (value << (7 * numRead));
 
             numRead++;
@@ -35,7 +34,12 @@ public static class StreamExtensions
             }
         }
 
-        return result;
+        if (result > int.MaxValue || result < int.MinValue)
+        {
+            throw new FormatException("VarInt is out of range");
+        }
+
+        return (int)result;
     }
 
     public static void WriteVarInt(this Stream stream, int value)
@@ -55,9 +59,14 @@ public static class StreamExtensions
 
     public static string ReadString(this Stream stream)
     {
-        int length = stream.ReadVarInt();
+        long length = stream.ReadVarInt();
+        if (length < 0 || length > int.MaxValue)
+        {
+            throw new FormatException("String length is invalid");
+        }
+
         byte[] data = new byte[length];
-        int bytesRead = stream.Read(data, 0, length);
+        int bytesRead = stream.Read(data, 0, (int)length);
         if (bytesRead < length)
         {
             throw new EndOfStreamException("Failed to read complete string");

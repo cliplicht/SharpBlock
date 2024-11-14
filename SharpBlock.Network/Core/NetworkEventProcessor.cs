@@ -62,7 +62,7 @@ public class NetworkEventProcessor
                 break;
 
             case ClientDisconnectedEvent disconnectedEvent:
-                HandleClientDisconnected(disconnectedEvent);
+                await HandleClientDisconnected(disconnectedEvent);
                 break;
 
             default:
@@ -92,6 +92,7 @@ public class NetworkEventProcessor
         // Store leftover bytes in client for next read
         if (leftoverBytes > 0)
         {
+            // Correctly call SetBufferedData with required parameters
             client.SetBufferedData(combinedData, combinedData.Length - leftoverBytes, leftoverBytes);
         }
         else
@@ -109,7 +110,7 @@ public class NetworkEventProcessor
 
     private async Task HandleClientDisconnected(ClientDisconnectedEvent disconnectedEvent)
     {
-        _logger.LogInformation($"Client disconnected: {disconnectedEvent.Client.RemoteEndPoint}");
+        _logger.LogInformation("Client disconnected: {RemoteEndPoint}", disconnectedEvent.Client.RemoteEndPoint?.ToString());
         var packetHandler = ActivatorUtilities.CreateInstance<PacketHandler>(_serviceProvider);
         await packetHandler.SetClientConnectionAsync(disconnectedEvent.Client);
         await packetHandler.HandleDisconnectAsync();

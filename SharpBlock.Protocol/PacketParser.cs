@@ -18,73 +18,96 @@ public class PacketParser
     }
 
     public List<IPacket> Parse(byte[] buffer, int bytesRead, ConnectionState connectionState, ref int leftoverBytes)
-{
-    List<IPacket> packets = new();
-    int offset = 0;
-
-    _logger.LogInformation($"Starting packet parsing with {bytesRead} bytes, connection state: {connectionState}");
-
-    while (offset < bytesRead)
     {
-        int varIntLength;
+        List<IPacket> packets = new();
+        int offset = 0;
 
-        // Try to read packet length
-        var packetLengthValue = buffer.ReadVarInt(offset, out varIntLength);
-        if (packetLengthValue == null)
+        _logger.LogInformation($"Starting packet parsing with {bytesRead} bytes, connection state: {connectionState}");
+
+        while (offset < bytesRead)
         {
-            _logger.LogWarning("Incomplete VarInt for packet length detected.");
-            leftoverBytes = bytesRead - offset;
-            break; // Wait for more data
+            int packetStartOffset = offset;
+
+            // Read packet length VarInt
+            var packetLengthValue = buffer.ReadVarInt(offset, out int packetLengthVarIntLength);
+            if (packetLengthValue == null)
+            {
+                _logger.LogWarning("Incomplete VarInt for packet length detected.");
+                break; // Wait for more data
+            }
+
+            int packetLength = packetLengthValue;
+            offset += packetLengthVarIntLength;
+
+            if (offset + packetLength > bytesRead)
+            {
+                _logger.LogWarning(
+                    $"Incomplete packet detected. Packet length: {packetLength}, bytes available: {bytesRead - offset}");
+                // Reset offset to start of incomplete packet
+                offset = packetStartOffset;
+                break;
+            }
+
+            int packetDataStartOffset = offset;
+
+            // Read packet ID VarInt
+            var packetIdValue = buffer.ReadVarInt(offset, out int packetIdVarIntLength);
+            if (packetIdValue == null)
+            {
+                _logger.LogWarning("Incomplete VarInt for packet ID detected.");
+                // Reset offset to start of incomplete packet
+                offset = packetStartOffset;
+                break; // Wait for more data
+            }
+
+            int packetId = packetIdValue;
+            offset += packetIdVarIntLength;
+
+            // Calculate bytes read from packet data so far
+            int bytesReadFromPacketData = offset - packetDataStartOffset;
+
+            // Correct packet data length calculation
+            int packetDataLength = packetLength - bytesReadFromPacketData;
+
+            if (packetDataLength < 0)
+            {
+                _logger.LogWarning("Packet data length is negative.");
+                // Reset offset to start of incomplete packet
+                offset = packetStartOffset;
+                break;
+            }
+
+            if (offset + packetDataLength > bytesRead)
+            {
+                _logger.LogWarning("Incomplete packet data detected.");
+                // Reset offset to start of incomplete packet
+                offset = packetStartOffset;
+                break; // Wait for more data
+            }
+
+            IPacket packet = _packetFactory.CreatePacket(packetId, connectionState);
+            if (packet == null)
+            {
+                _logger.LogWarning($"Unknown packet ID {packetId} in state {connectionState}");
+                // Skip unknown packet
+                offset += packetDataLength;
+                continue;
+            }
+
+            // Read the packet data
+            using var ms = new MemoryStream(buffer, offset, packetDataLength);
+            packet.Read(ms);
+            packets.Add(packet);
+
+            _logger.LogInformation($"Successfully parsed packet ID {packetId} in state {connectionState}");
+
+            // Advance the offset by the packet data length
+            offset += packetDataLength;
         }
 
-        int packetLength = packetLengthValue;
-        offset += varIntLength;
+        // Calculate leftover bytes
+        leftoverBytes = bytesRead - offset;
 
-        if (offset + packetLength > bytesRead)
-        {
-            _logger.LogWarning($"Incomplete packet detected. Packet length: {packetLength}, bytes available: {bytesRead - offset}");
-            leftoverBytes = bytesRead - (offset - varIntLength);
-            break;
-        }
-
-        // Try to read packet ID
-        var packetIdValue = buffer.ReadVarInt(offset, out int packetIdLength);
-        if (packetIdValue == null)
-        {
-            _logger.LogWarning("Incomplete VarInt for packet ID detected.");
-            leftoverBytes = bytesRead - (offset - varIntLength);
-            break; // Wait for more data
-        }
-
-        int packetId = packetIdValue;
-        offset += packetIdLength;
-
-        IPacket packet = _packetFactory.CreatePacket(packetId, connectionState);
-        if (packet == null)
-        {
-            _logger.LogWarning($"Unknown packet ID {packetId} in state {connectionState}");
-            // Skip unknown packet
-            offset += packetLength - packetIdLength;
-            continue;
-        }
-
-        int packetDataLength = packetLength - packetIdLength;
-        if (offset + packetDataLength > bytesRead)
-        {
-            _logger.LogWarning("Incomplete packet data detected.");
-            leftoverBytes = bytesRead - (offset - varIntLength);
-            break; // Wait for more data
-        }
-
-        using var ms = new MemoryStream(buffer, offset, packetDataLength);
-        packet.Read(ms);
-        packets.Add(packet);
-
-        _logger.LogInformation($"Successfully parsed packet ID {packetId} in state {connectionState}");
-
-        offset += packetDataLength;
+        return packets;
     }
-
-    return packets;
-}
 }

@@ -42,8 +42,7 @@ public class PacketHandler : IPacketHandler
     {
         _logger.LogInformation(
             $"Received Handshake Packet from {_clientConnection?.RemoteEndPoint}: ProtocolVersion={packet.ProtocolVersion}, ServerAddress={packet.ServerAddress}, ServerPort={packet.ServerPort}, NextState={packet.NextState}");
-
-        await _clientConnection!.SetConnectionStateAsync((ConnectionState)packet.NextState);
+        _clientConnection.ConnectionState = (ConnectionState)packet.NextState;
 
         await Task.CompletedTask;
     }
@@ -122,7 +121,7 @@ public class PacketHandler : IPacketHandler
         if (_clientConnection != null)
         {
             await _clientConnection.SendPacketAsync(loginSuccessPacket);
-            await _clientConnection.SetConnectionStateAsync(ConnectionState.Play);
+            _clientConnection.ConnectionState = ConnectionState.Play;
         }
         else
         {
