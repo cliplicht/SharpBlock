@@ -2,7 +2,9 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpBlock.Core.Options;
@@ -51,6 +53,7 @@ builder.ConfigureServices((context, services) =>
     services.AddSingleton<PacketFactory>();
     services.AddSingleton<NetworkEventProcessor>();
     services.AddHttpClient();
+    services.RemoveAll<IHttpMessageHandlerBuilderFilter>();
     services.AddSingleton<EncryptionService>();
     services.AddTransient<PacketHandler>();
 
